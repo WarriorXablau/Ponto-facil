@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101512">
+<meta name="application-name" content="Ponto Fácil">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml"><meta name="description" content="Calcule seu horário de saída do trabalho com o Ponto Fácil.">
+<title>Ponto Fácil</title>
+<style>
+:root{color-scheme:dark;--bg:#0d120f;--panel:#151d18;--panel2:#1c2820;--line:#2a382e;--text:#f2f7f3;--muted:#9ba99f;--green:#65dc91;--green2:#173d27;--red:#ff8585}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#18251c 0,#0d120f 55%);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);display:flex;justify-content:center;padding:28px 16px}
+main{width:min(100%,470px)}header{text-align:center;margin:10px 0 26px}.mark{width:54px;height:54px;margin:0 auto 12px;border-radius:17px;background:var(--green2);display:grid;place-items:center;color:var(--green);font-size:27px;font-weight:800}h1{font-size:27px;letter-spacing:-.7px;margin:0}.tag{color:var(--muted);font-size:13px;margin:6px 0 0}
+.card{background:linear-gradient(160deg,#18221b,#131a16);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 18px 55px #0005}.section-title{font-size:16px;font-weight:700;margin:0 0 18px}.field{margin:0 0 15px}.field label{display:block;font-size:13px;color:#bdc9c0;margin-bottom:7px}.field input{width:100%;background:#0e1511;border:1px solid #344238;border-radius:12px;padding:13px 14px;color:var(--text);font:600 18px system-ui;outline:none;min-height:50px}.field input:focus{border-color:var(--green);box-shadow:0 0 0 3px #65dc9120}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{font-size:12px;color:var(--muted);margin:-3px 0 17px;line-height:1.5}.btn{width:100%;border:0;border-radius:13px;padding:15px;background:var(--green);color:#092012;font-size:16px;font-weight:800;cursor:pointer}.btn:active{transform:scale(.99)}.result{display:none;margin-top:18px;padding:20px 16px;background:linear-gradient(140deg,#163c26,#122b1c);border:1px solid #2c7046;border-radius:17px;text-align:center}.result.show{display:block}.result small{display:block;color:#b4d8bf;font-weight:700;letter-spacing:1px;font-size:11px}.time{font-size:43px;line-height:1.25;font-weight:850;letter-spacing:-1px;color:var(--green);margin:5px 0}.detail{font-size:12px;color:#c0d6c6}.error{display:none;color:var(--red);font-size:13px;margin:14px 2px 0;line-height:1.5}.error.show{display:block}.foot{text-align:center;color:#718078;font-size:11px;margin:18px 0 0}.reset{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:11px;padding:10px 14px;margin-top:14px;width:100%;font-weight:600;cursor:pointer}
+</style></head>
+<body><main>
+<header><div class="mark">✓</div><h1>Ponto Fácil</h1><p class="tag">Seu horário de saída, sem complicação.</p></header>
+<section class="card" aria-label="Calculadora de jornada">
+<p class="section-title">Calcule sua jornada</p>
+<div class="two">
+<div class="field"><label for="entrada">Horário de entrada</label><input id="entrada" type="time" value="08:00"></div>
+<div class="field"><label for="meta">Carga horária</label><input id="meta" type="time" value="07:20"></div>
+</div>
+<div class="two">
+<div class="field"><label for="pausa">Saída para intervalo</label><input id="pausa" type="time" value="12:00"></div>
+<div class="field"><label for="volta">Retorno do intervalo</label><input id="volta" type="time" value="14:00"></div>
+</div>
+<p class="hint">Informe a carga horária diária que você precisa cumprir. O intervalo não entra na soma das horas trabalhadas.</p>
+<button class="btn" id="calcular">Calcular horário de saída</button>
+<div class="error" id="erro" role="alert"></div>
+<div class="result" id="resultado" aria-live="polite"><small>SEU HORÁRIO DE SAÍDA</small><div class="time" id="horaSaida">17:20</div><div class="detail" id="detalhe">Jornada diária: 7h20</div></div>
+<button class="reset" id="limpar" type="button">Restaurar horários de exemplo</button>
+</section>
+<p class="foot">Ponto Fácil · Calculadora de jornada</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function minutes(id){const v=$(id).value;if(!/^\d{2}:\d{2}$/.test(v))return null;const [h,m]=v.split(':').map(Number);return h<24&&m<60?h*60+m:null}
+function format(total){total=((total%1440)+1440)%1440;return String(Math.floor(total/60)).padStart(2,'0')+':'+String(total%60).padStart(2,'0')}
+function duration(n){return Math.floor(n/60)+'h'+String(n%60).padStart(2,'0')}
+function calculate(){const e=minutes('entrada'),p=minutes('pausa'),v=minutes('volta'),t=minutes('meta');$('erro').classList.remove('show');$('resultado').classList.remove('show');
+if([e,p,v,t].some(x=>x===null)){return error('Preencha todos os horários corretamente.');}
+if(t<=0){return error('A carga horária precisa ser maior que zero.');}
+if(p<=e){return error('A saída para intervalo precisa ser depois da entrada.');}
+if(v<=p){return error('O retorno precisa ser depois do início do intervalo.');}
+const before=p-e;
+if(t<=before){const leave=e+t; $('horaSaida').textContent=format(leave);$('detalhe').textContent='Você já teria completado a jornada antes do intervalo.';$('resultado').classList.add('show');return;}
+const leave=v+(t-before);$('horaSaida').textContent=format(leave);$('detalhe').textContent='Jornada diária: '+duration(t)+' · Intervalo: '+duration(v-p);$('resultado').classList.add('show');}
+function error(msg){$('erro').textContent=msg;$('erro').classList.add('show')}
+$('calcular').addEventListener('click',calculate);$('limpar').addEventListener('click',()=>{ $('entrada').value='08:00';$('pausa').value='12:00';$('volta').value='14:00';$('meta').value='07:20';$('erro').classList.remove('show');$('resultado').classList.remove('show');});
+</script><script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {})); }
+</script>
+</body></html>
